@@ -73,7 +73,7 @@ class Blockchain {
             block.hash = SHA256(JSON.stringify(block).toString());
             self.chain.push(block);
             self.heightOfChain = block.height;
-            resolve('block added successfully');
+            resolve(block);
         });
     }
 
@@ -111,7 +111,16 @@ class Blockchain {
     submitStar(address, message, signature, star) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            
+            let messageTime = parseInt(message.split(':')[1]);
+            let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
+            if((currentTime - messageTime) > 300) {
+                reject('Time has passed the 5 min window')
+            } else if(!bitcoinMessage.verify(message, address, signature)) {
+                reject('bitcoinMessage cannot be verified')
+            } else {
+                let block = new BlockClass.Block({data: star});
+                resolve(self._addBlock(block));
+            }
         });
     }
 
