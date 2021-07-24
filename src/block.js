@@ -50,7 +50,7 @@ class Block {
                 resolve(true);
             } else {
                 // Returning the Block is not valid
-                resolve('Block is not valid');
+                reject(`Block with hash: ${blockHash} and height: ${this.height} is not valid`);
             }
         });
     }

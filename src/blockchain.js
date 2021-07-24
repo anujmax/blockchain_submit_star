@@ -67,7 +67,7 @@ class Blockchain {
             let heightOfChain = self.height == -1 ? 0 : self.height;
             block.timestamp = new Date().getTime().toString().slice(0, -3);
             if(self.height != -1) {
-                block.previousBlockHash = self.getBlockByHeight(heightOfChain);
+                block.previousBlockHash = await self.getBlockByHeight(heightOfChain).catch(error => errorLog.push(error));
             } 
             block.height = self.heightOfChain + 1;
             block.hash = SHA256(JSON.stringify(block).toString());
@@ -118,7 +118,7 @@ class Blockchain {
             } else if(!bitcoinMessage.verify(message, address, signature)) {
                 reject('bitcoinMessage cannot be verified')
             } else {
-                let block = new BlockClass.Block({data: star});
+                let block = new BlockClass.Block({"owner": address, "star": star});
                 resolve(self._addBlock(block));
             }
         });
@@ -133,7 +133,12 @@ class Blockchain {
     getBlockByHash(hash) {
         let self = this;
         return new Promise((resolve, reject) => {
-           
+            let block = self.chain.filter(p => p.hash === hash)[0];
+            if(block){
+                resolve(block.hash);
+            } else {
+                resolve(null);
+            }
         });
     }
 
@@ -149,7 +154,7 @@ class Blockchain {
             if(block){
                 resolve(block);
             } else {
-                resolve(null);
+                reject(null);
             }
         });
     }
@@ -164,7 +169,14 @@ class Blockchain {
         let self = this;
         let stars = [];
         return new Promise((resolve, reject) => {
-            
+            this.chain.map (
+                block => block.getBData()
+            ).filter (
+                blockData => blockData.owner == address
+            ).map (
+                blockData => stars.push(blockData.star)
+            );
+            resolve(stars);
         });
     }
 
@@ -178,7 +190,12 @@ class Blockchain {
         let self = this;
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
-            
+            self.chain.forEach((block, index) => {
+                block.validate().catch(error => errorLog.push(error));
+                if(index > 0 && block.previousBlockHash != self.chain[index-1].hash) {
+                    errorLog.push(`Block with hash: ${blockHash} and height: ${this.height} has invalid previous block hash: ${block.previousBlockHash}`);
+                }
+            })
         });
     }
 
