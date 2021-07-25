@@ -65,14 +65,17 @@ class Blockchain {
         let self = this;
         return new Promise(async (resolve, reject) => {
             let heightOfChain = self.height;
-            block.timestamp = new Date().getTime().toString().slice(0, -3);
-            if(self.height > 1) {
-                block.previousBlockHash = await self.getBlockByHeight(heightOfChain - 1).catch(error => console.log(error));
-            } 
+            block.time = new Date().getTime().toString().slice(0, -3);
+            
             block.height = heightOfChain + 1;
             block.hash = SHA256(JSON.stringify(block)).toString();
             self.chain.push(block);
             self.height = block.height;
+            if(self.height >= 1) {
+                 await self.getBlockByHeight(self.height - 1)
+                 .then(previousBlock => block.previousBlockHash = previousBlock.hash)
+                 .catch(error => reject(error));
+            }
             resolve(block);
         });
     }
@@ -170,13 +173,14 @@ class Blockchain {
         let self = this;
         let stars = [];
         return new Promise((resolve, reject) => {
-            this.chain.map (
-                block => block.getBData().catch(error => console.log(error))
-            ).filter (
-                blockData => blockData.owner == address
-            ).map (
-                blockData => stars.push(blockData.star)
-            );
+            for (let i = 0; i < self.chain.length; i++) {
+                self.chain[i].getBData()
+                .then((blockData) => {
+                    if (blockData.owner == address) {
+                        stars.push(blockData);
+                    }
+                }).catch(error => reject(error));
+              }
             resolve(stars);
         });
     }
@@ -190,7 +194,7 @@ class Blockchain {
     validateChain() {
         let self = this;
         let errorLog = [];
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve, reject) => {
             self.chain.forEach((block, index) => {
                 block.validate().catch(error => errorLog.push(error));
                 if(index > 0 && block.previousBlockHash != self.chain[index-1].hash) {
