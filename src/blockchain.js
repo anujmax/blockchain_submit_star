@@ -64,15 +64,15 @@ class Blockchain {
     _addBlock(block) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let heightOfChain = self.height == -1 ? 0 : self.height;
+            let heightOfChain = self.height;
             block.timestamp = new Date().getTime().toString().slice(0, -3);
-            if(self.height != -1) {
-                block.previousBlockHash = await self.getBlockByHeight(heightOfChain).catch(error => errorLog.push(error));
+            if(self.height > 1) {
+                block.previousBlockHash = await self.getBlockByHeight(heightOfChain - 1).catch(error => console.log(error));
             } 
-            block.height = self.heightOfChain + 1;
-            block.hash = SHA256(JSON.stringify(block).toString());
+            block.height = heightOfChain + 1;
+            block.hash = SHA256(JSON.stringify(block)).toString();
             self.chain.push(block);
-            self.heightOfChain = block.height;
+            self.height = block.height;
             resolve(block);
         });
     }
@@ -119,7 +119,8 @@ class Blockchain {
                 reject('bitcoinMessage cannot be verified')
             } else {
                 let block = new BlockClass.Block({"owner": address, "star": star});
-                resolve(self._addBlock(block));
+                let createdBlock = await self._addBlock(block).catch(error => console.log(error));
+                resolve(createdBlock);
             }
         });
     }
@@ -154,7 +155,7 @@ class Blockchain {
             if(block){
                 resolve(block);
             } else {
-                reject(null);
+                resolve(null);
             }
         });
     }
@@ -170,7 +171,7 @@ class Blockchain {
         let stars = [];
         return new Promise((resolve, reject) => {
             this.chain.map (
-                block => block.getBData()
+                block => block.getBData().catch(error => console.log(error))
             ).filter (
                 blockData => blockData.owner == address
             ).map (
@@ -198,7 +199,6 @@ class Blockchain {
             })
         });
     }
-
 }
 
 module.exports.Blockchain = Blockchain;   
